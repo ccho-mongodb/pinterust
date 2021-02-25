@@ -2,18 +2,22 @@
 <html>
     <head>
         <title>{{ board.title }}</title>
+        <link rel="stylesheet" href="css/pinterust.css">
     </head>
     <body>
         <h2>{{ board.title }} ({{ board.category }} board)</h2>
 
         <h3>Pins:</h3>
         {% for pin in pins %}
-            <h4>{{ pin.title }}</h4>
-            Author: {{ pin.author_username }}<br>
-            Date created: {{ pin.date_created }}<br>
-            <a href={{ pin.url }}>
-                <img src={{ pin.image_url }}>
-            </a>
+            <figure>
+              <img src={{ pin.image_url }}>
+
+              <figcaption>
+                <p><a href={{ pin.url }}>{{ pin.title }}</a></p>
+                <p>Created on: {{ pin.date_created }} by {{ pin.author_username }}</p>
+
+              </figcaption>
+            </figure>
         {% endfor %}
 
         <br>
