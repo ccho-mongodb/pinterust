@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Pinterust</title>
+    </head>
+    <body>
+        <h2>My Boards:</h2>
+        {% for board in personal_boards %}
+            <form action="get_personal_board" method="post">
+                <button type="submit" name="title" value={{ board.title }}>{{ board.title }}</button>
+            </form>
+        {% endfor %}
+
+        <br><br>
+
+        <h3>Create a new personal board:</h3>
+        <form action="new_personal_board" method="post">
+            <label for="title">Board name:</label>
+            <input type="text" id="title" name="title"><br>
+            <input type="submit" value="Create">
+        </form>
+
+        <br>
+
+        <h2>Group Boards:</h2>
+        {% for board in group_boards %}
+        <form action="get_group_board" method="post">
+            <button type="submit" name="title" value={{ board.title }}>{{ board.title }}</button>
+        </form>
+        {% endfor %}
+
+        <br>
+        
+        <h3>Create a new group board:</h3>
+        <form action="new_group_board" method="post">
+            <label for="title">Board name:</label>
+            <input type="text" id="title" name="title"><br>
+            <input type="submit" value="Create">
+        </form>
+    </body>
+</html>

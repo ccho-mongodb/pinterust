@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+    <head>
+        <title>{{ board.title }}</title>
+    </head>
+    <body>
+        <h2>{{ board.title }} ({{ board.category }} board)</h2>
+
+        <h3>Pins:</h3>
+        {% for pin in pins %}
+            <h4>{{ pin.title }}</h4>
+            Author: {{ pin.author_username }}<br>
+            Date created: {{ pin.date_created }}<br>
+            <a href={{ pin.url }}>
+                <img src={{ pin.image_url }}>
+            </a>
+        {% endfor %}
+
+        <br>
+
+        <h3>Add Pin:</h3>
+        <form action="add_pin" method="post">
+            <label for="title">Title:</label><br>
+            <input type="text" id="title" name="title"><br>
+            <label for="url">URL:</label><br>
+            <input type="text" id="url" name="url"><br><br>
+            <label for="image_url">Image URL:</label><br>
+            <input type="text" id="image_url" name="image_url"><br><br>
+            <input type="submit" value="Submit">
+        </form> 
+    </body>
+</html>
