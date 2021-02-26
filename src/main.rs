@@ -35,7 +35,6 @@ async fn main() -> std::io::Result<()> {
             .data(client.clone())
             .data(tera.clone())
             .wrap(CookieSession::signed(&[0; 32]))
-            .service(load_data)
             .service(set_user)
             .service(login)
             .service(new_personal_board)
@@ -47,9 +46,4 @@ async fn main() -> std::io::Result<()> {
     .bind("127.0.0.1:8083")?
     .run()
     .await
-}
-
-#[get("/")]
-async fn load_data() -> HttpResponse {
-    
 }
