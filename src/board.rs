@@ -5,6 +5,8 @@ use actix_web::{post, web, HttpResponse};
 use futures::{StreamExt, TryStreamExt};
 use mongodb::{
     bson::{doc, from_document, oid::ObjectId, to_document},
+    error::Result,
+    results::UpdateResult,
     Client, Collection,
 };
 use serde::Deserialize;
@@ -12,6 +14,7 @@ use tera::{Context, Tera, Value};
 
 use super::data_models::{Board, BoardKind, Pin, User};
 use super::user::set_view;
+use super::DB_NAME;
 
 #[derive(Deserialize)]
 pub struct BoardForm {
@@ -115,7 +118,6 @@ pub async fn get_group_board(
         .unwrap()
         .unwrap();
     session.set("board", board).unwrap();
-    // TODO increment view count
 
     view_board(client, tera, session).await
 }
@@ -125,25 +127,84 @@ pub async fn view_board(
     tera: web::Data<Tera>,
     session: Session,
 ) -> HttpResponse {
-    let board: Board = session.get("board").unwrap().unwrap();
-
     let mut context = Context::new();
 
+    let board: Board = session.get("board").unwrap().unwrap();
     context.insert("board", &board);
 
-    let pins: Collection<Pin> = client.database("pinterust").collection_with_type("pins");
-    let filter = doc! {
-        "id": { "$in": board.pins }
+    let pins = match board.category {
+        BoardKind::Personal => get_group_board_pins(&client, board.clone()).await.unwrap(),
+        BoardKind::Group => {
+            let user_id: ObjectId = session.get("user_id").unwrap().unwrap();
+            let pins = get_personal_board_pins(&client, &board.id, &user_id)
+                .await
+                .unwrap();
+            dbg!("{}", &pins);
+            pins
+        }
     };
-    let pins: Vec<Pin> = pins
-        .find(filter, None)
-        .await
-        .unwrap()
-        .try_collect()
-        .await
-        .unwrap();
     context.insert("pins", &pins);
+
+    match board.category {
+        BoardKind::Personal => {
+            // TODO increment view for personal board
+        }
+        BoardKind::Group => {
+            increment_group_board_count(&client, &board.id)
+                .await
+                .unwrap();
+        }
+    }
 
     let body = tera.render("board.html", &context).unwrap();
     HttpResponse::Ok().content_type("text/html").body(body)
+}
+
+async fn get_personal_board_pins(
+    client: &Client,
+    board_id: &ObjectId,
+    user_id: &ObjectId,
+) -> Result<Vec<Pin>> {
+    let coll: Collection<User> = client.database("DB_NAME").collection_with_type("users");
+    let filter = doc! {
+        "_id": user_id
+    };
+    let user = coll.find_one(filter, None).await?.unwrap();
+    let pins = user
+        .personal_boards
+        .iter()
+        .cloned()
+        .filter(|board| &board.id == board_id)
+        .next()
+        .unwrap()
+        .pins;
+
+    let coll: Collection<Pin> = client.database(DB_NAME).collection_with_type("pins");
+    let filter = doc! {
+        "_id": { "$in": pins }
+    };
+    let cursor = coll.find(filter, None).await?;
+    cursor.try_collect().await
+}
+
+// TODO #2
+async fn get_group_board_pins(client: &Client, board: Board) -> Result<Vec<Pin>> {
+    let coll: Collection<Pin> = client.database(DB_NAME).collection_with_type("pins");
+    let filter = doc! {
+        "_id": { "$in": board.pins }
+    };
+    let cursor = coll.find(filter, None).await?;
+    cursor.try_collect().await
+}
+
+// TODO #3
+async fn increment_group_board_count(client: &Client, board_id: &ObjectId) -> Result<UpdateResult> {
+    let boards: Collection<Board> = client.database(DB_NAME).collection_with_type("boards");
+    let filter = doc! {
+        "_id": board_id
+    };
+    let update = doc! {
+        "$inc": { "views": 1 }
+    };
+    boards.update_one(filter, update, None).await
 }

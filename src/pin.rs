@@ -3,6 +3,8 @@ use actix_web::{post, web, HttpResponse};
 use chrono::Utc;
 use mongodb::{
     bson::{doc, oid::ObjectId},
+    error::Result,
+    results::InsertOneResult,
     Client, Collection,
 };
 use serde::Deserialize;
@@ -10,7 +12,10 @@ use tera::Tera;
 
 use crate::board::view_board;
 
-use super::data_models::{Board, Pin, User};
+use super::{
+    data_models::{Board, Pin, User},
+    DB_NAME,
+};
 
 #[derive(Deserialize)]
 struct PinForm {
@@ -40,11 +45,21 @@ async fn add_pin(
     tera: web::Data<Tera>,
     session: Session,
 ) -> HttpResponse {
-    let pins: Collection<Pin> = client.database("pinterust").collection_with_type("pins");
     let pin: Pin = pin.into_pin(&session);
-    pins.insert_one(pin.clone(), None).await.unwrap();
+    insert_pin(&client, pin.clone()).await.unwrap();
 
-    // TODO add pin to current board's pins list
+    let board: Board = session.get("board").unwrap().unwrap();
+    let boards: Collection<Board> = client.database("pinterust").collection_with_type("boards");
+    let filter = doc! { "_id": board.id };
+    let update = doc! { "$push": { "pins": pin.id } };
+    boards.update_one(filter, update, None).await.unwrap();
 
     view_board(client, tera, session).await
+}
+
+// TODO #1
+async fn insert_pin(client: &Client, pin: Pin) -> Result<InsertOneResult> {
+    let db = client.database(DB_NAME);
+    let coll: Collection<Pin> = db.collection_with_type("pins");
+    coll.insert_one(pin, None).await
 }

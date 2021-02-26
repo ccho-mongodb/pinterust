@@ -72,7 +72,7 @@ pub async fn set_view(
     context.insert("personal_boards", &user.personal_boards);
 
     let boards: Collection<Board> = client.database("pinterust").collection_with_type("boards");
-    let query = doc! { "id": { "$in": user.group_boards } };
+    let query = doc! { "_id": { "$in": user.group_boards } };
     let group_boards: Vec<Board> = boards
         .find(query, None)
         .await

@@ -22,6 +22,8 @@ use data_models::{Board, BoardKind, Pin, User};
 use pin::add_pin;
 use user::{login, set_user};
 
+pub static DB_NAME: &str = "pinterust";
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let uri = env!("MONGODB_URI");
@@ -33,6 +35,7 @@ async fn main() -> std::io::Result<()> {
             .data(client.clone())
             .data(tera.clone())
             .wrap(CookieSession::signed(&[0; 32]))
+            .service(load_data)
             .service(set_user)
             .service(login)
             .service(new_personal_board)
@@ -44,4 +47,9 @@ async fn main() -> std::io::Result<()> {
     .bind("127.0.0.1:8083")?
     .run()
     .await
+}
+
+#[get("/")]
+async fn load_data() -> HttpResponse {
+    
 }
